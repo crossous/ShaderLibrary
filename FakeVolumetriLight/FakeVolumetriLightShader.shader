@@ -18,6 +18,8 @@
 		{
 			Tags { "LightMode"="UniversalForward" }
 			
+			Blend SrcAlpha OneMinusSrcAlpha
+			
 			HLSLPROGRAM
 			#pragma enable_d3d11_debug_symbols
 			#pragma vertex vert
@@ -246,7 +248,7 @@
 			{
 				float2 screenUV = input.projectPosition.xy / input.projectPosition.w;
 				
-				float3 backgroundColor = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, screenUV).rgb;
+				//float3 backgroundColor = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, screenUV).rgb;
 
 				float depth = SAMPLE_TEXTURE2D_X(_CameraDepthTexture, sampler_CameraDepthTexture, screenUV).r;
 
@@ -302,12 +304,14 @@
 					float cosTheta = dot(dirOP, dirOB);
 					
 					float atten = 1 - saturate((1 - cosTheta) / (1 - cosAlpha) - _InnerRate);
-					
-					float3 color = lerp(backgroundColor, _LightColor, inScatter * atten);
-					return float4(color, 1);
+
+					return float4(_LightColor, inScatter * atten);
+					// float3 color = lerp(backgroundColor, _LightColor, inScatter * atten);
+					// return float4(color, 1);
 				}
 				
-				return float4(backgroundColor, 1);
+				//return float4(backgroundColor, 1);
+				return float4(0, 0, 0, 0);
 			}
 			
 			

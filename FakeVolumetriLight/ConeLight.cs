@@ -11,7 +11,7 @@ public class ConeLight : MonoBehaviour
     public Color lightColor = Color.white;
     [Range(0, 0.499f)]
     public float oriRadius = 0.2f;
-    [Range(0, 0.5f)]
+    [Range(0.001f, 0.5f)]
     public float destRadius = 0.5f;
 
     // [Range(0, 90.0f)]

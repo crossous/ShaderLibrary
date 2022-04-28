@@ -8,10 +8,11 @@
     	_ra("ra", Float) = 0.4
     	_rb("rb", Float) = 0.1
     	_InnerRate("Inner Rate", Range(0, 1)) = 0.9
+//    	_Noise("_Noise", 2D) = "white"{}
     }
     SubShader
     {
-        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "Queue"="Transparent" }
+        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Transparent" "Queue"="Transparent" }
         LOD 200
 
         Pass
@@ -19,6 +20,7 @@
 			Tags { "LightMode"="UniversalForward" }
 			
 			Blend SrcAlpha OneMinusSrcAlpha
+			ZWrite Off
 			
 			HLSLPROGRAM
 			#pragma enable_d3d11_debug_symbols
@@ -51,6 +53,9 @@
 			TEXTURE2D(_CameraOpaqueTexture);
 			SAMPLER(sampler_CameraOpaqueTexture);
 
+			//TEXTURE2D(_Noise);
+			//SAMPLER(sampler_Noise);
+
 			CBUFFER_START(UnityPerMaterial)
 			float3 _LightColor;
 			float3 _pa;
@@ -58,6 +63,7 @@
 			float _ra;
 			float _rb;
 			float _InnerRate;
+			float4 _Noise_ST;
 			CBUFFER_END
 
 			Varyings vert(Attributes input)
@@ -79,23 +85,12 @@
 
 			float4 GetScreenWorldPos(float2 screenUV, float depth)
 			{
-				// //获取像素的屏幕空间位置
-				// float3 ScreenPos = float3(ScreenUV , Depth);
-				// float4 normalScreenPos = float4(ScreenPos * 2.0 - 1.0 , 1.0);
-				// //得到ndc空间下像素位置
-				// float4 ndcPos = mul( unity_CameraInvProjection , normalScreenPos );
-				// ndcPos = float4(ndcPos.xyz / ndcPos.w , 1.0);
-				// //获取世界空间下像素位置
-				// float4 sencePos = mul( unity_CameraToWorld , ndcPos * float4(1,1,-1,1));
-				// sencePos = float4(sencePos.xyz , 1.0);
-				// return sencePos;
-				
 	        #if UNITY_REVERSED_Z
 	            depth = 1.0 - depth;
+				screenUV.y = 1 - screenUV.y;
 	        #endif
 
 	            depth = 2.0 * depth - 1.0;
-				screenUV.y = 1 - screenUV.y;
 
 	            float3 viewPos = ComputeViewSpacePosition(screenUV, depth, unity_CameraInvProjection);
 	            float4 worldPos = float4(mul(unity_CameraToWorld, float4(viewPos, 1.0)).xyz, 1.0);
@@ -243,6 +238,44 @@
 
 			    return l;
 			}
+
+			//float NoiseAtten(float3 startWS, float3 startToEndWS, float3 lightPosWS, float distance)
+			//{
+			//	float3 startOS = TransformWorldToObject(startWS);
+			//	float3 startToEndOS = normalize(TransformWorldToObjectDir(startToEndWS));
+			//	float3 lightPosOS = TransformWorldToObject(lightPosWS);
+			//	
+			//	float3 marchStep = distance * (1.0 / 11) * startToEndOS;
+			//
+			//	float3 currentPointOS = startOS;
+			//
+			//	float total = 0;
+			//	for(int i = 0; i < 10; ++i)
+			//	{
+			//		currentPointOS += marchStep;
+			//
+			//		float3 buttomOS = float3(0, currentPointOS.y, 0);
+			//		float3 discDir = normalize(currentPointOS - buttomOS);
+			//		
+			//		float buttomRadius = length(currentPointOS - buttomOS);
+			//		float height = length(lightPosOS - buttomOS);
+			//		float3 topOS = float3(0, -1, 0);
+			//		float topHeight = length(lightPosOS - topOS);
+			//		float topRadius = topHeight / height * buttomRadius;
+			//
+			//		//[-oriRadius, oriRadius]
+			//		float3 topDiscOS = topOS + discDir * topRadius;
+			//		float2 uv = topDiscOS.xz * 0.5 + 0.5;
+			//		uv = uv * _Noise_ST.xy +_Noise_ST.zw;
+			//
+			//		float3 destOS = float3(0, 1, 0);
+			//		int lod = (lightPosOS - currentPointOS) / (lightPosOS - destOS) * 10;
+			//		
+			//		total += SAMPLE_TEXTURE2D_LOD(_Noise, sampler_Noise, uv, lod).r;
+			//	}
+			//
+			//	return total * 0.1;
+			//}
 			
 			float4 frag(Varyings input) : SV_Target
 			{
@@ -304,7 +337,8 @@
 					float cosTheta = dot(dirOP, dirOB);
 					
 					float atten = 1 - saturate((1 - cosTheta) / (1 - cosAlpha) - _InnerRate);
-
+					//float noiseAtten = NoiseAtten(startPoint, rayDir, lightPosWS, pointDistance);
+					
 					return float4(_LightColor, inScatter * atten);
 					// float3 color = lerp(backgroundColor, _LightColor, inScatter * atten);
 					// return float4(color, 1);
